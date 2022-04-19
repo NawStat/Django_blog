@@ -5,4 +5,5 @@
 * Implementing full-text search with PostgreSQL
 
 ### Envirement
-python -m venv .env
+    python -m venv .env
+    pip install - r requirements.txt
