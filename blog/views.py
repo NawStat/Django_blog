@@ -8,6 +8,10 @@ from .models import Post, Comment
 from .forms import EmailPostForm, CommentForm
 from taggit.models import Tag
 from django.db.models import Count
+from django.contrib.postgres.search import SearchVector
+from .forms import EmailPostForm, CommentForm, SearchForm
+from django.contrib.postgres.search import SearchVector, SearchQuery, SearchRank
+from django.contrib.postgres.search import TrigramSimilarity
 
 def post_list(request, tag_slug=None):
     object_list = Post.published.all()
@@ -93,4 +97,30 @@ def post_share(request, post_id):
                                                     'sent': sent})
 
 
+def post_search(request):
+    form = SearchForm()
+    query = None
+    results = []
+    if 'query' in request.GET:
+        form = SearchForm(request.GET)
+        if form.is_valid():
+            query = form.cleaned_data['query']
+            ## search
+            # results = Post.published.annotate(search=SearchVector('title', 'body'),).filter(search=query)
+            ## rank
+            # search_vector = SearchVector('title', 'body')
+            # search_query = SearchQuery(query)
+            # results = Post.published.annotate(
+            #     search=search_vector,
+            #     rank=SearchRank(search_vector, search_query)
+            # ).filter(search=search_query).order_by('-rank')
+            ## trigram
+            results = Post.published.annotate(
+                similarity=TrigramSimilarity('title', query),
+            ).filter(similarity__gt=0.1).order_by('-similarity')
 
+    return render(request,
+                  'blog/post/search.html',
+                  {'form': form,
+                   'query': query,
+                   'results': results})
